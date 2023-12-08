@@ -1,3 +1,4 @@
+import re
 import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext
@@ -38,12 +39,15 @@ def parse_http_file(file_path):
     http_requests = []
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
-        parts = content.split('### Request')
+        # 使用正则表达式来匹配字符串的开始或每行的开始
+        parts = re.split(r'(?m)^\s*###\s*', content)
         for part in parts:
             if not part.strip():
                 continue
             # 跳过part变量的第一行
-            part = part.split('\n')[1:]
+            part = part.split('\n')
+            while part[0].find('HTTP/1.1') == -1:
+                part = part[1:]
             part = '\n'.join(part)
 
             lines = part.strip().split('\n')
@@ -187,7 +191,7 @@ def load_http_requests(root, text_area):
             label.pack(side=tk.LEFT)
 
             # 构造要显示的完整HTTP请求内容
-            http_content = f"{req['method']} {req['url']}\n" + "\n".join(
+            http_content = f"Method: {req['method']} \nUrl: {req['url']}\n" + "\n".join(
                 [f"{k}: {v}" for k, v in req['headers'].items()])
             if req['body']:
                 http_content += "\n\n" + json.dumps(req['body'], indent=4, ensure_ascii=False)
