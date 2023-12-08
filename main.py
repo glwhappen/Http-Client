@@ -92,15 +92,20 @@ def send_request(method, url, headers, body=None):
     except Exception as e:
         return f"Error: {e}"
 
-def execute_request(req, text_widget):
+def execute_request(req, button, text_widget):
     def thread_func():
+        # 更新按钮文本以反映正在进行的请求
+        button.config(text="Requesting...")
         result = send_request(req['method'], req['url'], req['headers'], req.get('body'))
-        # 更新界面需要在主线程中进行，可以使用text_widget.after方法
+
+        # 请求完成后更新界面
         text_widget.after(0, lambda: text_widget.insert(tk.END, result + '\n\n'))
+        button.config(text="Execute")  # 请求完成后恢复按钮文本
 
     # 创建并启动一个新线程来执行网络请求
     thread = threading.Thread(target=thread_func)
     thread.start()
+
 def create_gui():
     root = tk.Tk()
     root.title("HTTP Request Executor")
@@ -127,8 +132,8 @@ def load_http_requests(root, text_area):
             label = ttk.Label(frame, text=f"{req['method']} {req['url']}")
             label.pack(side=tk.LEFT)
 
-            # 优化lambda表达式，避免闭包陷阱
-            button = ttk.Button(frame, text="Execute", command=lambda r=req: execute_request(r, text_area))
+            button = ttk.Button(frame, text="Execute")
+            button.config(command=lambda b=button, r=req: execute_request(r, b, text_area))
             button.pack(side=tk.RIGHT)
 
 root, text_area = create_gui()
