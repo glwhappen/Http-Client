@@ -1,3 +1,4 @@
+import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext
 import requests
@@ -92,9 +93,14 @@ def send_request(method, url, headers, body=None):
         return f"Error: {e}"
 
 def execute_request(req, text_widget):
-    result = send_request(req['method'], req['url'], req['headers'], req.get('body'))
-    text_widget.insert(tk.END, result + '\n\n')
+    def thread_func():
+        result = send_request(req['method'], req['url'], req['headers'], req.get('body'))
+        # 更新界面需要在主线程中进行，可以使用text_widget.after方法
+        text_widget.after(0, lambda: text_widget.insert(tk.END, result + '\n\n'))
 
+    # 创建并启动一个新线程来执行网络请求
+    thread = threading.Thread(target=thread_func)
+    thread.start()
 def create_gui():
     root = tk.Tk()
     root.title("HTTP Request Executor")
