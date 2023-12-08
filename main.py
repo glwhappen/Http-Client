@@ -88,7 +88,15 @@ def send_request(method, url, headers, body=None):
             return f"Unsupported method: {method}"
         # 设置响应的编码
         response.encoding = 'utf-8'
-        return response.text
+        result = response.text
+        # 尝试将结果解析为JSON，然后转换为包含实际中文字符的字符串
+        try:
+            result_json = json.loads(result)
+            result = json.dumps(result_json, indent=4, ensure_ascii=False)
+        except json.JSONDecodeError:
+            pass  # 如果结果不是JSON格式，保持原样
+        return result
+
     except Exception as e:
         return f"Error: {e}"
 
