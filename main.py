@@ -3,43 +3,66 @@ from tkinter import ttk, filedialog, scrolledtext
 import requests
 import json
 
+
+def parse_request_line(line):
+    parts = line.split(' ')
+    if len(parts) < 2:
+        return None, None
+    method, path = parts[0], parts[1]
+    return method, path
+
+def parse_headers(lines):
+    headers = {}
+    for line in lines:
+        # 如果遇到空行，停止处理头部
+        if line.strip() == '':
+            break
+        if ':' in line and '###' not in line and '{' not in line:
+            key, value = line.split(': ', 1)
+            # 忽略行中的注释部分
+            key, value = key.split('#', 1)[0], value.split('#', 1)[0]
+            headers[key.strip()] = value.strip()
+    print(headers)
+    return headers
+
+def parse_body(lines):
+    body_str = ''.join(lines)
+    try:
+        return json.loads(body_str)
+    except json.JSONDecodeError:
+        print("JSON decode error in HTTP file.")
+        return None
+
 def parse_http_file(file_path):
     http_requests = []
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
         parts = content.split('### Request')
         for part in parts:
-            lines = part.strip().split('\n')
-            if not lines:
+            if not part.strip():
                 continue
-            request = {'headers': {}, 'body': None, 'method': None, 'url': None}
-            for i, line in enumerate(lines):
-                if line.startswith('GET') or line.startswith('POST'):
-                    parts = line.split(' ')
-                    if len(parts) >= 2:
-                        request['method'] = parts[0]
-                        path = parts[1]
-                elif line.startswith('Host:'):
-                    host = line.split(': ')[1].strip()
-                    if '://' not in host:
-                        host = 'http://' + host  # Default to http if no scheme is specified
-                    request['url'] = host
-                elif ':' in line and '{' not in line and '###' not in line:
-                    key, value = line.split(': ', 1)
-                    request['headers'][key] = value
-                elif '{' in line:
-                    body_str = '\n'.join(lines[i:])  # Join the current and all following lines
-                    try:
-                        request['body'] = json.loads(body_str)
-                    except json.JSONDecodeError:
-                        print("JSON decode error in HTTP file.")
-                        return []
-                    break  # Exit the loop after processing the body
-            if request['method'] and request['url']:
-                request['url'] = request['url'] + path  # Append the path to the host URL
-                http_requests.append(request)
-    print(http_requests)
+            # 跳过part变量的第一行
+            part = part.split('\n')[1:]
+            part = '\n'.join(part)
+
+            lines = part.strip().split('\n')
+            method, path = parse_request_line(lines[0])
+            if not method or not path:
+                continue
+            print(method, path)
+
+            headers = parse_headers(lines[1:])
+            # 找到第一个包含'{'的行，然后从那里开始解析body
+            body_start_line = next((i for i, line in enumerate(lines) if '{' in line), len(lines))
+            body = parse_body(lines[body_start_line:])
+
+            url = 'http://' + headers.get("Host", "") + path
+            print(url)
+            http_requests.append({'method': method, 'url': url, 'headers': headers, 'body': body})
+
     return http_requests
+
+
 
 def ensure_content_type_and_charset(headers, default_content_type='application/json'):
     content_type = headers.get('Content-Type', default_content_type)
