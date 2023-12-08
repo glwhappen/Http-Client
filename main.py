@@ -110,6 +110,48 @@ def execute_request(req, button, text_widget):
     thread.start()
 
 
+class ToolTip(object):
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+        self.id = None
+        self.x = self.y = 0
+
+    def showtip(self, text):
+        "显示工具提示"
+        self.text = text
+        if self.tipwindow or not self.text:
+            return
+        x, y, _, _ = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 25
+        y = y + self.widget.winfo_rooty() + 25
+        self.tipwindow = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(tw, text=self.text, justify=tk.LEFT,
+                         background="#ffffe0", relief=tk.SOLID, borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
+
+def create_tooltip(widget, text):
+    tooltip = ToolTip(widget)
+
+    def enter(event):
+        tooltip.showtip(text)
+
+    def leave(event):
+        tooltip.hidetip()
+
+    widget.bind('<Enter>', enter)
+    widget.bind('<Leave>', leave)
+
+
 def create_gui():
     root = tk.Tk()
     root.title("HTTP Request Executor")
@@ -135,6 +177,14 @@ def load_http_requests(root, text_area):
 
             label = ttk.Label(frame, text=f"{req['method']} {req['url']}")
             label.pack(side=tk.LEFT)
+
+            # 构造要显示的完整HTTP请求内容
+            http_content = f"{req['method']} {req['url']}\n" + "\n".join(
+                [f"{k}: {v}" for k, v in req['headers'].items()])
+            if req['body']:
+                http_content += "\n\n" + json.dumps(req['body'], indent=4, ensure_ascii=False)
+            # 应用工具提示
+            create_tooltip(label, http_content)
 
             button = ttk.Button(frame, text="Execute")
             button.config(command=lambda b=button, r=req: execute_request(r, b, text_area))
