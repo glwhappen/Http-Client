@@ -1,0 +1,16 @@
+### Request 1: 获取文章
+GET /posts/55 HTTP/1.1
+Host: jsonplaceholder.typicode.com
+
+
+### Request 2: 添加文章
+POST /posts HTTP/1.1
+Host: jsonplaceholder.typicode.com
+Content-Type: application/json
+Content-Length: 61
+
+{
+    "userId": 6,
+    "title": "post ### 小文章",
+    "body": "描述"
+}
