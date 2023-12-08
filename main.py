@@ -102,15 +102,15 @@ def create_gui():
     frame = ttk.Frame(root)
     frame.pack(padx=10, pady=10, fill='x')
 
-    open_button = ttk.Button(frame, text="Open HTTP File", command=lambda: load_http_requests(root))
-    open_button.pack(side=tk.LEFT)
-
     text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=15)
     text_area.pack(padx=10, pady=10, fill='both', expand=True)
 
+    open_button = ttk.Button(frame, text="Open HTTP File", command=lambda: load_http_requests(root, text_area))
+    open_button.pack(side=tk.LEFT)
+
     return root, text_area
 
-def load_http_requests(root):
+def load_http_requests(root, text_area):
     file_path = filedialog.askopenfilename(filetypes=[("HTTP Files", "*.http")])
     if file_path:
         http_requests = parse_http_file(file_path)
@@ -121,7 +121,8 @@ def load_http_requests(root):
             label = ttk.Label(frame, text=f"{req['method']} {req['url']}")
             label.pack(side=tk.LEFT)
 
-            button = ttk.Button(frame, text="Execute", command=lambda r=req, ta=text_area: execute_request(r, ta))
+            # 优化lambda表达式，避免闭包陷阱
+            button = ttk.Button(frame, text="Execute", command=lambda r=req: execute_request(r, text_area))
             button.pack(side=tk.RIGHT)
 
 root, text_area = create_gui()
