@@ -94,6 +94,9 @@ def send_request(method, url, headers, body=None):
 
 def execute_request(req, button, text_widget):
     def thread_func():
+        # 清空文本区域
+        text_widget.delete('1.0', tk.END)
+
         # 更新按钮文本以反映正在进行的请求
         button.config(text="Requesting...")
         result = send_request(req['method'], req['url'], req['headers'], req.get('body'))
@@ -105,6 +108,7 @@ def execute_request(req, button, text_widget):
     # 创建并启动一个新线程来执行网络请求
     thread = threading.Thread(target=thread_func)
     thread.start()
+
 
 def create_gui():
     root = tk.Tk()
