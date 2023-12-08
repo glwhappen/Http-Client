@@ -17,8 +17,14 @@ def parse_http_file(file_path):
                 if line.startswith('GET') or line.startswith('POST'):
                     parts = line.split(' ')
                     if len(parts) >= 2:
-                        request['method'], request['url'] = parts[0:2]
-                elif ':' in line and '{' not in line:
+                        request['method'] = parts[0]
+                        path = parts[1]
+                elif line.startswith('Host:'):
+                    host = line.split(': ')[1].strip()
+                    if '://' not in host:
+                        host = 'http://' + host  # Default to http if no scheme is specified
+                    request['url'] = host
+                elif ':' in line and '{' not in line and '###' not in line:
                     key, value = line.split(': ', 1)
                     request['headers'][key] = value
                 elif '{' in line:
@@ -29,20 +35,35 @@ def parse_http_file(file_path):
                         print("JSON decode error in HTTP file.")
                         return []
                     break  # Exit the loop after processing the body
-            if request['method'] and request['url']:  # Ensure both method and url are present
+            if request['method'] and request['url']:
+                request['url'] = request['url'] + path  # Append the path to the host URL
                 http_requests.append(request)
+    print(http_requests)
     return http_requests
 
+def ensure_content_type_and_charset(headers, default_content_type='application/json'):
+    content_type = headers.get('Content-Type', default_content_type)
+
+    # 检查是否已经有charset设置
+    if 'charset=' not in content_type:
+        # 添加charset=utf-8
+        content_type += '; charset=utf-8'
+
+    headers['Content-Type'] = content_type
+    return headers
 
 
 def send_request(method, url, headers, body=None):
     try:
+        headers = ensure_content_type_and_charset(headers)
         if method == 'POST':
             response = requests.post(url, headers=headers, json=body)
         elif method == 'GET':
             response = requests.get(url, headers=headers)
         else:
             return f"Unsupported method: {method}"
+        # 设置响应的编码
+        response.encoding = 'utf-8'
         return response.text
     except Exception as e:
         return f"Error: {e}"
